@@ -1,0 +1,87 @@
+{
+  "description": "每轮时间注入 + 会话归档 + 压缩前交接快照 + 文件修改记录 + 危险命令闸门",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$PROJECT_ROOT/.codex/inject_time.sh\"",
+            "timeout": 10,
+            "statusMessage": "每轮注入实时时间"
+          },
+          {
+            "type": "command",
+            "command": "\"$PROJECT_ROOT/.codex/diary_workflow_trigger.sh\"",
+            "timeout": 10,
+            "statusMessage": "识别日记工作流触发语句",
+            "additionalContextLimit": 1500
+          },
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"$PROJECT_ROOT/.codex/expression_optimizer_trigger.py\"",
+            "timeout": 10,
+            "statusMessage": "识别普通提问表达优化",
+            "additionalContextLimit": 1000
+          },
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"$PROJECT_ROOT/.codex/archive_user_prompt.py\"",
+            "timeout": 10,
+            "statusMessage": "保存当前用户消息"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$PROJECT_ROOT/.codex/pre_compact.sh\"",
+            "timeout": 10,
+            "statusMessage": "压缩前写交接快照"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$PROJECT_ROOT/.codex/post_tool_use.sh\"",
+            "timeout": 10,
+            "statusMessage": "记录文件修改"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"$PROJECT_ROOT/.codex/archive_turn.py\"",
+            "timeout": 30,
+            "statusMessage": "归档当前会话并更新索引"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "exec_command|Shell|Bash|UnifiedExec",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$PROJECT_ROOT/.codex/pre_tool_use_gate.sh\"",
+            "timeout": 5,
+            "statusMessage": "危险命令＋反循环闸门"
+          }
+        ]
+      }
+    ]
+  }
+}
